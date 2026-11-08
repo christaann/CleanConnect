@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Complaints Map - CleanConnect{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet.js CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="container">
+        <h1>🗺️ Complaints Map</h1>
+        <p>View all reported issues geographically. Color-coded by status.</p>
+    </div>
+</section>
+
+<section class="map-section">
+    <div class="container">
+
+        <!-- Map Legend -->
+        <div class="map-legend">
+            <div class="legend-pill red"><span class="dot-sm"></span> Pending</div>
+            <div class="legend-pill yellow"><span class="dot-sm"></span> In Progress</div>
+            <div class="legend-pill green"><span class="dot-sm"></span> Resolved</div>
+            <div class="legend-pill gray">
+                <i class="fas fa-map-marker-alt"></i>
+                Total: <strong>{{ complaints|length }}</strong> pinned locations
+            </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="complaintsMap" style="width:100%; height:560px; border-radius:14px; border:2px solid #e2e8f0; z-index:1;"></div>
+
+        {% if not complaints %}
+        <div class="map-empty-notice" style="margin-top:14px;">
+            <i class="fas fa-info-circle"></i>
+            No complaints with GPS coordinates yet. Submit a complaint and pin a location to see it here!
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+<!-- Embed complaints as JSON directly into page — safest method -->
+<script>
+    var complaintsData = {{ complaints_json | safe }};
+</script>
+{% endblock %}
+
+
+{% block extra_scripts %}
+<!-- Leaflet.js — completely free, no API key needed -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initComplaintsMap();
+    });
+
+    function initComplaintsMap() {
+        var mapDiv = document.getElementById('complaintsMap');
+        if (!mapDiv) return;
+
+        // Create map centred on Bengaluru
+        var map = L.map('complaintsMap').setView([12.9716, 77.5946], 11);
+
+        // Free OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Marker colours using Leaflet's built-in circle markers
+        // Red = Pending, Yellow = In Progress, Green = Resolved
+        var statusColors = {
+            'Pending':     { color: '#ef4444', fillColor: '#fca5a5' },
+            'In Progress': { color: '#f59e0b', fillColor: '#fde68a' },
+            'Resolved':    { color: '#22c55e', fillColor: '#86efac' }
+        };
+
+        var markersAdded = 0;
+
+        for (var i = 0; i < complaintsData.length; i++) {
+            var c = complaintsData[i];
+
+            var lat = parseFloat(c.latitude);
+            var lng = parseFloat(c.longitude);
+            if (isNaN(lat) || isNaN(lng)) continue;
+
+            // Use circle markers — clearly colour-coded, no external icon images needed
+            var style = statusColors[c.status] || statusColors['Pending'];
+
+            var marker = L.circleMarker([lat, lng], {
+                radius:      10,
+                color:       style.color,
+                fillColor:   style.fillColor,
+                fillOpacity: 0.9,
+                weight:      2
+            }).addTo(map);
+
+            // Build popup content
+            var desc     = c.description || 'No description provided.';
+            var shortDesc = desc.length > 120 ? desc.substring(0, 120) + '...' : desc;
+            var idStr    = String(c.id || 0).padStart(4, '0');
+            var status   = c.status || 'Pending';
+            var location = c.location || 'Unknown location';
+
+            var bgColor  = status === 'Pending' ? '#fee2e2'
+                         : status === 'In Progress' ? '#fef3c7' : '#dcfce7';
+            var txtColor = status === 'Pending' ? '#b91c1c'
+                         : status === 'In Progress' ? '#92400e' : '#166534';
+
+            var popupHtml =
+                '<div style="font-family:Arial,sans-serif; min-width:200px; max-width:260px;">' +
+                    '<h4 style="margin:0 0 6px; font-size:14px; color:#0f172a;">' + (c.issue_type || 'Issue') + '</h4>' +
+                    '<p style="margin:0 0 4px; font-size:12px; color:#475569;"><strong>📍 Location:</strong> ' + location + '</p>' +
+                    '<p style="margin:0 0 8px; font-size:12px; color:#334155;">' + shortDesc + '</p>' +
+                    '<span style="display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700;' +
+                        'background:' + bgColor + '; color:' + txtColor + ';">' + status + '</span>' +
+                    '<p style="margin:6px 0 0; font-size:11px; color:#94a3b8;">Complaint #' + idStr + '</p>' +
+                '</div>';
+
+            marker.bindPopup(popupHtml);
+
+            // Animate marker on hover
+            marker.on('mouseover', function() { this.openPopup(); });
+
+            markersAdded++;
+        }
+
+        // If no markers found, show a gentle notice on the page
+        if (markersAdded === 0) {
+            var notice = document.createElement('div');
+            notice.style.cssText = 'background:#fef3c7; color:#92400e; padding:14px 20px;' +
+                'border-radius:8px; margin-top:14px; font-size:14px;';
+            notice.innerHTML = '<i class="fas fa-info-circle"></i> ' +
+                'No complaints with GPS coordinates yet. ' +
+                'Submit a complaint and pin the location on the map!';
+            mapDiv.insertAdjacentElement('afterend', notice);
+        } else {
+            // Auto-fit the map view to show all markers
+            var group = [];
+            for (var j = 0; j < complaintsData.length; j++) {
+                var lt = parseFloat(complaintsData[j].latitude);
+                var ln = parseFloat(complaintsData[j].longitude);
+                if (!isNaN(lt) && !isNaN(ln)) group.push([lt, ln]);
+            }
+            if (group.length > 0) {
+                map.fitBounds(group, { padding: [40, 40] });
+            }
+        }
+
+        console.log('Leaflet map loaded. Markers placed: ' + markersAdded);
+    }
+</script>
+{% endblock %}

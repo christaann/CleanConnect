@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}My Complaints - CleanConnect{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="container">
+        <h1>📋 My Complaints</h1>
+        <p>Welcome, <strong>{{ session.get('user_name') }}</strong> — Track all your submitted complaints here.</p>
+    </div>
+</section>
+
+<section class="admin-section">
+    <div class="container">
+
+        <!-- Stats Cards -->
+        <div class="stats-row">
+            <div class="stat-card total">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ total }}</span>
+                    <span class="stat-label">Total</span>
+                </div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ pending }}</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+            <div class="stat-card progress">
+                <div class="stat-icon">🟡</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ inprogress }}</span>
+                    <span class="stat-label">In Progress</span>
+                </div>
+            </div>
+            <div class="stat-card resolved">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ resolved }}</span>
+                    <span class="stat-label">Resolved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit New Button -->
+        <div style="margin-bottom:20px;">
+            <a href="{{ url_for('submit_issue') }}" class="btn-primary">
+                <i class="fas fa-plus-circle"></i> Submit New Complaint
+            </a>
+        </div>
+
+        <!-- Search -->
+        <div class="admin-controls">
+            <div class="admin-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="mySearch" placeholder="Search your complaints...">
+            </div>
+            <div class="admin-filter">
+                <select id="myFilter" onchange="filterMyComplaints()">
+                    <option value="all">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Complaints Table -->
+        <!--
+            Column indices from my_complaints route:
+            c[0]=id  c[1]=issue_type  c[2]=location  c[3]=description
+            c[4]=photo  c[5]=status  c[6]=submitted_at
+        -->
+        <div class="table-wrapper">
+            {% if complaints %}
+            <table class="admin-table" id="myTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Issue Type</th>
+                        <th>Location</th>
+                        <th>Description</th>
+                        <th>Photo</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in complaints %}
+                    <tr class="complaint-row"
+                        data-status="{{ c[5] }}"
+                        data-search="{{ c[2]|lower }} {{ c[1]|lower }}">
+                        <td><span class="id-badge">#{{ '%04d' % c[0] }}</span></td>
+                        <td>
+                            <span class="issue-type-tag">
+                                {% if c[1] == 'Garbage' %}🗑️
+                                {% elif c[1] == 'Water Leakage' %}💧
+                                {% elif c[1] == 'Street Light Not Working' %}💡
+                                {% elif c[1] == 'Road Damage' %}🛣️
+                                {% elif c[1] == 'Drainage Blockage' %}🚰
+                                {% endif %}
+                                {{ c[1] }}
+                            </span>
+                        </td>
+                        <td><span class="location-text">{{ c[2] }}</span></td>
+                        <td>
+                            {% if c[3] and c[3] != 'No description provided.' %}
+                            <span class="desc-text">{{ c[3][:80] }}{% if c[3]|length > 80 %}...{% endif %}</span>
+                            {% else %}<span class="no-photo-text">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if c[4] %}
+                            <a href="{{ url_for('static', filename='uploads/' + c[4]) }}"
+                               target="_blank" class="view-photo-btn">
+                                <i class="fas fa-image"></i> View
+                            </a>
+                            {% else %}<span class="no-photo-text">—</span>{% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ c[5]|lower|replace(' ','-') }}">
+                                {{ c[5] }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="date-text">
+                                {{ c[6].strftime('%d %b %Y') if c[6] else 'N/A' }}<br>
+                                <small>{{ c[6].strftime('%I:%M %p') if c[6] else '' }}</small>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <div style="font-size:3rem">📭</div>
+                <h3>No complaints submitted yet.</h3>
+                <p>Click the button above to report your first issue.</p>
+                <a href="{{ url_for('submit_issue') }}" class="btn-primary" style="margin-top:12px;">
+                    Report an Issue
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('mySearch').addEventListener('input', filterMyComplaints);
+    function filterMyComplaints() {
+        var search = document.getElementById('mySearch').value.toLowerCase();
+        var filter = document.getElementById('myFilter').value;
+        document.querySelectorAll('.complaint-row').forEach(function(row) {
+            var sm = filter === 'all' || row.dataset.status === filter;
+            var km = !search || row.dataset.search.includes(search);
+            row.style.display = sm && km ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

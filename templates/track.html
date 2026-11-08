@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Track Complaints - CleanConnect{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="container">
+        <h1>🔍 Track Complaints</h1>
+        <p>View all submitted complaints and their current resolution status.</p>
+    </div>
+</section>
+
+<section class="track-section">
+    <div class="container">
+
+        <!-- Filter Buttons -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="Pending">🔴 Pending</button>
+            <button class="filter-btn" data-filter="In Progress">🟡 In Progress</button>
+            <button class="filter-btn" data-filter="Resolved">🟢 Resolved</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search by location, issue type...">
+        </div>
+
+        {% if complaints %}
+        <!--
+            Column indices from the track route query:
+            c[0] = id
+            c[1] = issue_type
+            c[2] = location
+            c[3] = description
+            c[4] = photo
+            c[5] = status
+            c[6] = submitted_at
+        -->
+        <div class="complaints-grid" id="complaintsGrid">
+            {% for c in complaints %}
+            <div class="complaint-card"
+                 data-status="{{ c[5] }}"
+                 data-search="{{ c[2]|lower }} {{ c[1]|lower }} {{ c[3]|lower if c[3] else '' }}">
+
+                <!-- Header: issue type + status badge -->
+                <div class="card-header">
+                    <span class="issue-type-badge">
+                        {% if c[1] == 'Garbage' %}🗑️
+                        {% elif c[1] == 'Water Leakage' %}💧
+                        {% elif c[1] == 'Street Light Not Working' %}💡
+                        {% elif c[1] == 'Road Damage' %}🛣️
+                        {% elif c[1] == 'Drainage Blockage' %}🚰
+                        {% endif %}
+                        {{ c[1] }}
+                    </span>
+                    <span class="status-badge status-{{ c[5]|lower|replace(' ', '-') }}">
+                        {{ c[5] }}
+                    </span>
+                </div>
+
+                <!-- Photo or placeholder -->
+                {% if c[4] %}
+                <img src="{{ url_for('static', filename='uploads/' + c[4]) }}"
+                     alt="Complaint Photo" class="complaint-photo">
+                {% else %}
+                <div class="no-photo">
+                    <i class="fas fa-image"></i>
+                    <span>No Photo</span>
+                </div>
+                {% endif %}
+
+                <!-- Details -->
+                <div class="card-body">
+                    <div class="detail-row">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>{{ c[2] }}</span>
+                    </div>
+                    {% if c[3] and c[3] != 'No description provided.' %}
+                    <div class="detail-row description-row">
+                        <i class="fas fa-align-left"></i>
+                        <span>{{ c[3][:120] }}{% if c[3]|length > 120 %}...{% endif %}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-row">
+                        <i class="fas fa-clock"></i>
+                        <span>{{ c[6].strftime('%d %b %Y, %I:%M %p') if c[6] else 'N/A' }}</span>
+                    </div>
+                </div>
+
+                <!-- Complaint ID footer -->
+                <div class="card-footer">
+                    <span class="complaint-id"># {{ '%04d' % c[0] }}</span>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- No results after filtering -->
+        <div id="noResults" style="display:none; text-align:center; padding:40px;">
+            <div style="font-size:3rem">🔍</div>
+            <h3>No complaints found</h3>
+            <p>Try a different filter or search term.</p>
+        </div>
+
+        {% else %}
+        <!-- Empty state: no complaints in DB yet -->
+        <div class="empty-state">
+            <div style="font-size:4rem">📭</div>
+            <h2>No Complaints Yet</h2>
+            <p>Be the first to report a civic issue in your area.</p>
+            <a href="{{ url_for('submit_issue') }}" class="btn-primary">Report an Issue</a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterComplaints();
+        });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', filterComplaints);
+
+    function filterComplaints() {
+        const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+        const searchText   = document.getElementById('searchInput').value.toLowerCase();
+        const cards        = document.querySelectorAll('.complaint-card');
+        let visibleCount   = 0;
+
+        cards.forEach(card => {
+            const statusMatch = activeFilter === 'all' || card.dataset.status === activeFilter;
+            const searchMatch = !searchText || card.dataset.search.includes(searchText);
+            if (statusMatch && searchMatch) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

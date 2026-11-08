@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - CleanConnect{% endblock %}
+
+{% block content %}
+<section class="admin-section">
+    <div class="container">
+
+        <!-- Admin Header -->
+        <div class="admin-header">
+            <div>
+                <h1>🛡️ Admin Dashboard</h1>
+                <p>Welcome, <strong>{{ session.get('admin_username','Admin') }}</strong> — Manage all complaints here.</p>
+            </div>
+            <a href="{{ url_for('admin_logout') }}" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-row">
+            <div class="stat-card total">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ total_count }}</span>
+                    <span class="stat-label">Total Complaints</span>
+                </div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ pending_count }}</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+            <div class="stat-card progress">
+                <div class="stat-icon">🟡</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ inprogress_count }}</span>
+                    <span class="stat-label">In Progress</span>
+                </div>
+            </div>
+            <div class="stat-card resolved">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ resolved_count }}</span>
+                    <span class="stat-label">Resolved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="category-tabs">
+            <a href="{{ url_for('admin_dashboard', category='All') }}"
+               class="cat-tab {% if active_category == 'All' %}active{% endif %}">
+                All <span class="tab-count">{{ total_count }}</span>
+            </a>
+            {% for cat in categories %}
+            <a href="{{ url_for('admin_dashboard', category=cat) }}"
+               class="cat-tab {% if active_category == cat %}active{% endif %}">
+                {% if cat == 'Garbage' %}🗑️
+                {% elif cat == 'Water Leakage' %}💧
+                {% elif cat == 'Street Light Not Working' %}💡
+                {% elif cat == 'Road Damage' %}🛣️
+                {% elif cat == 'Drainage Blockage' %}🚰
+                {% endif %}
+                {{ cat }}
+                <span class="tab-count">{{ category_counts[cat] }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Search Form -->
+        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="search-form">
+            <input type="hidden" name="category" value="{{ active_category }}">
+            <div class="search-grid">
+                <div class="search-field">
+                    <input type="text" name="search_id"
+                           placeholder="🔍 Complaint ID"
+                           value="{{ search_id }}">
+                </div>
+                <div class="search-field">
+                    <input type="text" name="search_name"
+                           placeholder="👤 User Name"
+                           value="{{ search_name }}">
+                </div>
+                <div class="search-field">
+                    <input type="text" name="search_location"
+                           placeholder="📍 Location"
+                           value="{{ search_location }}">
+                </div>
+                <div class="search-field">
+                    <select name="search_status">
+                        <option value="">All Status</option>
+                        <option value="Pending"     {% if search_status=='Pending' %}selected{% endif %}>Pending</option>
+                        <option value="In Progress" {% if search_status=='In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Resolved"    {% if search_status=='Resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-search">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <a href="{{ url_for('admin_dashboard', category=active_category) }}"
+                   class="btn-clear">Clear</a>
+            </div>
+        </form>
+
+        <!-- Complaints Table -->
+        <!--
+            Column index map:
+            c[0]=id  c[1]=issue_type  c[2]=location  c[3]=latitude
+            c[4]=longitude  c[5]=description  c[6]=photo
+            c[7]=status  c[8]=submitted_at  c[9]=user_name
+        -->
+        <div class="table-wrapper">
+            {% if complaints %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Issue Type</th>
+                        <th>Location</th>
+                        <th>Description</th>
+                        <th>Photo</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Update</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in complaints %}
+                    <tr>
+                        <td><span class="id-badge">#{{ '%04d' % c[0] }}</span></td>
+                        <td><span style="font-size:13px;">{{ c[9] }}</span></td>
+                        <td>
+                            <span class="issue-type-tag">
+                                {% if c[1]=='Garbage' %}🗑️
+                                {% elif c[1]=='Water Leakage' %}💧
+                                {% elif c[1]=='Street Light Not Working' %}💡
+                                {% elif c[1]=='Road Damage' %}🛣️
+                                {% elif c[1]=='Drainage Blockage' %}🚰
+                                {% endif %}
+                                {{ c[1] }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="location-text">{{ c[2] }}</span>
+                            {% if c[3] and c[4] %}
+                            <br><small class="coords">{{ "%.4f"|format(c[3]) }}, {{ "%.4f"|format(c[4]) }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c[5] and c[5] != 'No description provided.' %}
+                            <span class="desc-text" title="{{ c[5] }}">
+                                {{ c[5][:70] }}{% if c[5]|length > 70 %}...{% endif %}
+                            </span>
+                            {% else %}<span class="no-photo-text">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if c[6] %}
+                            <a href="{{ url_for('static', filename='uploads/' + c[6]) }}"
+                               target="_blank" class="view-photo-btn">
+                                <i class="fas fa-image"></i> View
+                            </a>
+                            {% else %}<span class="no-photo-text">—</span>{% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ c[7]|lower|replace(' ','-') }}">
+                                {{ c[7] }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="date-text">
+                                {{ c[8].strftime('%d %b %Y') if c[8] else 'N/A' }}<br>
+                                <small>{{ c[8].strftime('%I:%M %p') if c[8] else '' }}</small>
+                            </span>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('update_status', complaint_id=c[0]) }}"
+                                  method="POST" class="status-update-form">
+                                <input type="hidden" name="category" value="{{ active_category }}">
+                                <select name="status" class="status-select">
+                                    <option value="Pending"     {% if c[7]=='Pending' %}selected{% endif %}>🔴 Pending</option>
+                                    <option value="In Progress" {% if c[7]=='In Progress' %}selected{% endif %}>🟡 In Progress</option>
+                                    <option value="Resolved"    {% if c[7]=='Resolved' %}selected{% endif %}>🟢 Resolved</option>
+                                </select>
+                                <button type="submit" class="btn-update">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('delete_complaint', complaint_id=c[0]) }}"
+                                  method="POST"
+                                  onsubmit="return confirm('Delete complaint #{{ c[0] }}?')">
+                                <input type="hidden" name="category" value="{{ active_category }}">
+                                <button type="submit" class="btn-delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <div style="font-size:3rem">📭</div>
+                <h3>No complaints found.</h3>
+                <p>Try clearing the search filters or selecting a different category.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+{% endblock %}

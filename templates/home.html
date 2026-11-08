@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}CleanConnect - Report Civic Issues{% endblock %}
+
+{% block content %}
+
+<!-- HERO SECTION -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">🌿 Civic Issue Reporting Platform</div>
+        <h1 class="hero-title">
+            Make Your City <span class="highlight">Cleaner & Safer</span>
+        </h1>
+        <p class="hero-sub">
+            Report civic issues in your area — garbage, water leakage, broken street lights, road damage, and more.
+            Track the status of your complaint until it gets resolved.
+        </p>
+        <div class="hero-actions">
+            <a href="{{ url_for('submit_issue') }}" class="btn-primary">
+                <i class="fas fa-exclamation-circle"></i> Report an Issue
+            </a>
+            <a href="{{ url_for('track') }}" class="btn-secondary">
+                <i class="fas fa-search"></i> Track Complaints
+            </a>
+        </div>
+        <div class="hero-tags">
+            <span class="hero-tag">🗑️ Garbage</span>
+            <span class="hero-tag">💧 Water Leakage</span>
+            <span class="hero-tag">💡 Street Lights</span>
+            <span class="hero-tag">🛣️ Road Damage</span>
+            <span class="hero-tag">🚰 Drainage</span>
+        </div>
+    </div>
+
+    <div class="hero-illustration">
+        <div class="city-card">
+            <div class="city-icon">🏙️</div>
+            <div class="city-info">
+                <strong>Active Reports</strong>
+                <span>Bengaluru, India</span>
+            </div>
+        </div>
+        <div class="issue-cards">
+            <div class="issue-card">
+                <span>🗑️ Garbage Collection</span>
+                <span class="badge pending">Pending</span>
+            </div>
+            <div class="issue-card">
+                <span>💧 Water Leakage</span>
+                <span class="badge inprogress">In Progress</span>
+            </div>
+            <div class="issue-card">
+                <span>💡 Street Light</span>
+                <span class="badge resolved">Resolved</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">How It Works</span>
+            <h2>Simple 3-Step Process</h2>
+            <p>Report and track civic issues in your area.</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-number">01</div>
+                <div class="step-icon">📝</div>
+                <h3>Submit Your Report</h3>
+                <p>Fill in the issue type, location, and a short description. You can also attach a photo.</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step-card">
+                <div class="step-number">02</div>
+                <div class="step-icon">🔍</div>
+                <h3>Admin Reviews</h3>
+                <p>The admin team reviews your complaint and assigns it to the relevant department.</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step-card">
+                <div class="step-number">03</div>
+                <div class="step-icon">✅</div>
+                <h3>Issue Resolved</h3>
+                <p>Track the status of your complaint — Pending, In Progress, or Resolved.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ISSUE TYPES -->
+<section class="issue-types">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">Categories</span>
+            <h2>What Can You Report?</h2>
+        </div>
+        {% set submit_url = url_for('submit_issue') %}
+        <div class="types-grid">
+            <div class="type-card" onclick="window.location='{{ submit_url }}'">
+                <div class="type-emoji">🗑️</div>
+                <h3>Garbage</h3>
+                <p>Overflowing bins, illegal dumping, waste on streets</p>
+            </div>
+            <div class="type-card" onclick="window.location='{{ submit_url }}'">
+                <div class="type-emoji">💧</div>
+                <h3>Water Leakage</h3>
+                <p>Burst pipes, leaking taps, waterlogging</p>
+            </div>
+            <div class="type-card" onclick="window.location='{{ submit_url }}'">
+                <div class="type-emoji">💡</div>
+                <h3>Street Lights</h3>
+                <p>Non-functioning lights, broken poles</p>
+            </div>
+            <div class="type-card" onclick="window.location='{{ submit_url }}'">
+                <div class="type-emoji">🛣️</div>
+                <h3>Road Damage</h3>
+                <p>Potholes, cracks, damaged dividers</p>
+            </div>
+            <div class="type-card" onclick="window.location='{{ submit_url }}'">
+                <div class="type-emoji">🚰</div>
+                <h3>Drainage Blockage</h3>
+                <p>Clogged drains, sewage overflow</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA SECTION -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-box">
+            <h2>See an Issue? Report it Now!</h2>
+            <p>Your report can make a difference. Help keep your community clean and safe.</p>
+            <a href="{{ url_for('submit_issue') }}" class="btn-primary btn-large">
+                <i class="fas fa-plus-circle"></i> Submit a Complaint
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

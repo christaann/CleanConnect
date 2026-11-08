@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Register - CleanConnect{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">👤</div>
+            <h1>Create Account</h1>
+            <p>Register to submit and track your complaints</p>
+        </div>
+
+        <form action="{{ url_for('register') }}" method="POST" class="auth-form" id="registerForm">
+
+            <div class="form-group">
+                <label for="name"><i class="fas fa-user"></i> Full Name</label>
+                <input type="text" name="name" id="name"
+                       placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
+                <input type="email" name="email" id="email"
+                       placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password"><i class="fas fa-lock"></i> Password</label>
+                <div class="password-wrap">
+                    <input type="password" name="password" id="password"
+                           placeholder="Create a strong password"
+                           oninput="checkRegisterRules(this.value)" required>
+                    <button type="button" class="toggle-pwd" onclick="togglePwd('password','eyeIcon1')">
+                        <i class="fas fa-eye" id="eyeIcon1"></i>
+                    </button>
+                </div>
+                <!-- Live password rules -->
+                <div class="pwd-rules" id="pwdRules" style="display:none;">
+                    <p>Password must contain:</p>
+                    <div class="rule" id="r-len">   <span class="rule-icon">✗</span> At least 8 characters</div>
+                    <div class="rule" id="r-upper"> <span class="rule-icon">✗</span> One uppercase letter (A–Z)</div>
+                    <div class="rule" id="r-lower"> <span class="rule-icon">✗</span> One lowercase letter (a–z)</div>
+                    <div class="rule" id="r-digit"> <span class="rule-icon">✗</span> One digit (0–9)</div>
+                    <div class="rule" id="r-spec">  <span class="rule-icon">✗</span> One special character (!@#$%)</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password"><i class="fas fa-lock"></i> Confirm Password</label>
+                <div class="password-wrap">
+                    <input type="password" name="confirm_password" id="confirm_password"
+                           placeholder="Re-enter your password" required>
+                    <button type="button" class="toggle-pwd" onclick="togglePwd('confirm_password','eyeIcon2')">
+                        <i class="fas fa-eye" id="eyeIcon2"></i>
+                    </button>
+                </div>
+                <small class="hint" id="matchHint"></small>
+            </div>
+
+            <button type="submit" class="btn-submit" id="registerBtn">
+                <i class="fas fa-user-plus"></i> Register
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p class="hint-text">Already have an account?</p>
+            <a href="{{ url_for('user_login') }}" class="back-link">
+                <i class="fas fa-sign-in-alt"></i> Login here
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function checkRegisterRules(value) {
+    document.getElementById('pwdRules').style.display = value.length > 0 ? 'block' : 'none';
+    const rules = [
+        { id:'r-len',   pass: value.length >= 8 },
+        { id:'r-upper', pass: /[A-Z]/.test(value) },
+        { id:'r-lower', pass: /[a-z]/.test(value) },
+        { id:'r-digit', pass: /[0-9]/.test(value) },
+        { id:'r-spec',  pass: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value) },
+    ];
+    rules.forEach(r => {
+        const el = document.getElementById(r.id);
+        el.classList.toggle('met', r.pass);
+        el.querySelector('.rule-icon').textContent = r.pass ? '✓' : '✗';
+    });
+}
+
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const pwd  = document.getElementById('password').value;
+    const hint = document.getElementById('matchHint');
+    if (this.value.length === 0) { hint.textContent = ''; return; }
+    if (this.value === pwd) {
+        hint.textContent = '✓ Passwords match';
+        hint.style.color = '#16a34a';
+    } else {
+        hint.textContent = '✗ Passwords do not match';
+        hint.style.color = '#ef4444';
+    }
+});
+
+function togglePwd(inputId, iconId) {
+    const inp  = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}Report an Issue - CleanConnect{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet.js CSS - Free OpenStreetMap (no API key needed) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="container">
+        <h1>📝 Report a Civic Issue</h1>
+        <p>Fill in the details below. Your report will be reviewed and resolved as soon as possible.</p>
+    </div>
+</section>
+
+<section class="form-section">
+    <div class="container">
+        <div class="form-layout">
+
+            <!-- ============ COMPLAINT FORM ============ -->
+            <div class="form-card">
+                <h2 class="form-title">Complaint Details</h2>
+
+                <form action="{{ url_for('submit_issue') }}" method="POST" enctype="multipart/form-data" id="complaintForm">
+
+                    <!-- Issue Type (required) -->
+                    <div class="form-group">
+                        <label for="issue_type">
+                            <i class="fas fa-list-alt"></i> Issue Type <span class="required">*</span>
+                        </label>
+                        <select name="issue_type" id="issue_type" required>
+                            <option value="" disabled selected>-- Select Issue Type --</option>
+                            <option value="Garbage">🗑️ Garbage Collection</option>
+                            <option value="Water Leakage">💧 Water Leakage</option>
+                            <option value="Street Light Not Working">💡 Street Light Not Working</option>
+                            <option value="Road Damage">🛣️ Road Damage</option>
+                            <option value="Drainage Blockage">🚰 Drainage Blockage</option>
+                        </select>
+                    </div>
+
+                    <!-- Location (required) -->
+                    <div class="form-group">
+                        <label for="location">
+                            <i class="fas fa-map-marker-alt"></i> Location <span class="required">*</span>
+                        </label>
+                        <div class="location-input-wrap">
+                            <input type="text" name="location" id="location"
+                                   placeholder="e.g. MG Road, Bengaluru"
+                                   required autocomplete="off">
+                            <button type="button" class="detect-btn" id="detectBtn" onclick="detectLocation()">
+                                <i class="fas fa-crosshairs"></i> Use My Location
+                            </button>
+                        </div>
+                        <!-- Hidden GPS coordinates - filled when map is clicked or GPS detected -->
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
+                        <small class="hint">
+                            💡 Type a location name above, OR click the map to auto-fill it, OR use "Use My Location".
+                        </small>
+                    </div>
+
+                    <!-- Leaflet Map for pin selection -->
+                    <div class="form-group">
+                        <label><i class="fas fa-map"></i> Pin Location on Map <span style="font-weight:400; color:#64748b; font-size:13px;">(optional but recommended)</span></label>
+                        <!-- The map div must have an explicit height for Leaflet to render -->
+                        <div id="mapPicker" style="width:100%; height:320px; border-radius:10px; border:2px solid #e2e8f0; z-index:1;"></div>
+                        <small class="hint" id="mapHint" style="margin-top:6px; display:block;">
+                            🗺️ Click anywhere on the map to drop a pin. You can drag the pin to adjust.
+                        </small>
+                    </div>
+
+                    <!-- Description (OPTIONAL - no asterisk, no required) -->
+                    <div class="form-group">
+                        <label for="description">
+                            <i class="fas fa-align-left"></i> Description
+                            <span style="font-weight:400; color:#64748b; font-size:13px; margin-left:6px;">(Optional)</span>
+                        </label>
+                        <textarea name="description" id="description" rows="4"
+                                  placeholder="Describe the issue... e.g. how long it has been there, any safety risk (optional)"></textarea>
+                        <small class="char-count" id="charCount" style="color:#64748b;">Optional — but helpful for faster resolution!</small>
+                    </div>
+
+                    <!-- Photo Upload (optional) -->
+                    <div class="form-group">
+                        <label for="photo">
+                            <i class="fas fa-camera"></i> Photo
+                            <span style="font-weight:400; color:#64748b; font-size:13px; margin-left:6px;">(Optional)</span>
+                        </label>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <input type="file" name="photo" id="photo"
+                                   accept="image/*" onchange="previewPhoto(event)">
+                            <div class="upload-placeholder" id="uploadPlaceholder">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Click to upload or drag &amp; drop</span>
+                                <small>PNG, JPG, JPEG, GIF (max 16MB)</small>
+                            </div>
+                            <img id="photoPreview" src="" alt="Preview" class="photo-preview" style="display:none;">
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i> Submit Complaint
+                    </button>
+                </form>
+            </div><!-- end form-card -->
+
+            <!-- ============ TIPS SIDEBAR ============ -->
+            <div class="form-sidebar">
+                <div class="tips-card">
+                    <h3>📌 Tips for a Good Report</h3>
+                    <ul>
+                        <li>✅ Be specific about the location</li>
+                        <li>✅ Choose the correct issue type</li>
+                        <li>✅ Describe the problem clearly</li>
+                        <li>✅ Add a photo if possible</li>
+                        <li>✅ Mention how long the issue exists</li>
+                        <li>✅ Note any safety hazards</li>
+                    </ul>
+                </div>
+                <div class="status-legend-card">
+                    <h3>🔴🟡🟢 Status Guide</h3>
+                    <div class="legend-item">
+                        <span class="dot red"></span>
+                        <div>
+                            <strong>Pending</strong>
+                            <p>Report received, awaiting review</p>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="dot yellow"></span>
+                        <div>
+                            <strong>In Progress</strong>
+                            <p>Being actively worked on</p>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="dot green"></span>
+                        <div>
+                            <strong>Resolved</strong>
+                            <p>Issue has been fixed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end form-layout -->
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Leaflet.js - Free OpenStreetMap library, no API key required -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet geocoder plugin for reverse geocoding (address from coordinates) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<script>
+    // =============================================
+    // LEAFLET MAP - Free OpenStreetMap, no API key!
+    // =============================================
+    var leafletMap = null;
+    var leafletMarker = null;
+
+    // Initialize the Leaflet map after page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        initLeafletMap();
+    });
+
+    function initLeafletMap() {
+        // Default center: Bengaluru, India
+        var defaultLat = 12.9716;
+        var defaultLng = 77.5946;
+
+        // Create the Leaflet map in the #mapPicker div
+        leafletMap = L.map('mapPicker').setView([defaultLat, defaultLng], 12);
+
+        // Add OpenStreetMap tile layer (completely free, no key needed)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(leafletMap);
+
+        // Add Geocoder search box on the map
+        var geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false,
+            placeholder: 'Search location...',
+            collapsed: false
+        }).addTo(leafletMap);
+
+        // When user selects a result from the search box
+        geocoder.on('markgeocode', function(e) {
+            var center = e.geocode.center;
+            leafletMap.setView(center, 15);
+            placeMarker(center.lat, center.lng);
+            document.getElementById('location').value = e.geocode.name;
+        });
+
+        // Click on map to drop a pin
+        leafletMap.on('click', function (e) {
+            placeMarker(e.latlng.lat, e.latlng.lng);
+            reverseGeocode(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Also listen to the location text input — if user types and presses Enter,
+        // try to geocode it and move the map
+        document.getElementById('location').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                geocodeAddress(this.value);
+            }
+        });
+    }
+
+    // Place or move the draggable marker on the map
+    function placeMarker(lat, lng) {
+        // Remove existing marker if any
+        if (leafletMarker) {
+            leafletMap.removeLayer(leafletMarker);
+        }
+
+        // Create a new draggable marker
+        leafletMarker = L.marker([lat, lng], { draggable: true }).addTo(leafletMap);
+
+        // Update hidden coordinate fields
+        document.getElementById('latitude').value = lat.toFixed(7);
+        document.getElementById('longitude').value = lng.toFixed(7);
+        document.getElementById('mapHint').innerHTML =
+            '📍 <strong>Pinned!</strong> Lat: ' + lat.toFixed(5) + ', Lng: ' + lng.toFixed(5) +
+            ' — Drag the pin to adjust.';
+        document.getElementById('mapHint').style.color = '#16a34a';
+
+        // Update coords when marker is dragged to new position
+        leafletMarker.on('dragend', function () {
+            var pos = leafletMarker.getLatLng();
+            document.getElementById('latitude').value = pos.lat.toFixed(7);
+            document.getElementById('longitude').value = pos.lng.toFixed(7);
+            reverseGeocode(pos.lat, pos.lng);
+        });
+    }
+
+    // Reverse geocode: convert lat/lng to a readable address string
+    function reverseGeocode(lat, lng) {
+        var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng;
+        fetch(url, { headers: { 'Accept-Language': 'en' } })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data && data.display_name) {
+                    document.getElementById('location').value = data.display_name;
+                }
+            })
+            .catch(function() {
+                // Silently ignore reverse geocoding errors
+            });
+    }
+
+    // Forward geocode: type an address, move the map to it
+    function geocodeAddress(address) {
+        if (!address.trim()) return;
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1';
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(results) {
+                if (results && results.length > 0) {
+                    var lat = parseFloat(results[0].lat);
+                    var lng = parseFloat(results[0].lon);
+                    leafletMap.setView([lat, lng], 15);
+                    placeMarker(lat, lng);
+                }
+            });
+    }
+
+    // "Use My Location" button — browser GPS
+    function detectLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+        }
+        var btn = document.getElementById('detectBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+        btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                var lat = pos.coords.latitude;
+                var lng = pos.coords.longitude;
+                leafletMap.setView([lat, lng], 16);
+                placeMarker(lat, lng);
+                reverseGeocode(lat, lng);
+                btn.innerHTML = '<i class="fas fa-check"></i> Location Set!';
+                btn.style.background = '#16a34a';
+                setTimeout(function() {
+                    btn.innerHTML = '<i class="fas fa-crosshairs"></i> Use My Location';
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 2500);
+            },
+            function () {
+                alert('Could not get your location. Please allow location access in your browser, or pin manually on the map.');
+                btn.innerHTML = '<i class="fas fa-crosshairs"></i> Use My Location';
+                btn.disabled = false;
+            },
+            { timeout: 10000 }
+        );
+    }
+
+    // =============================================
+    // PHOTO PREVIEW
+    // =============================================
+    function previewPhoto(event) {
+        var file = event.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('photoPreview').src = e.target.result;
+                document.getElementById('photoPreview').style.display = 'block';
+                document.getElementById('uploadPlaceholder').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // =============================================
+    // DESCRIPTION CHAR COUNTER (optional field)
+    // =============================================
+    document.getElementById('description').addEventListener('input', function () {
+        var len = this.value.length;
+        var counter = document.getElementById('charCount');
+        if (len === 0) {
+            counter.textContent = 'Optional — but helpful for faster resolution!';
+            counter.style.color = '#64748b';
+        } else {
+            counter.textContent = len + ' characters ✓';
+            counter.style.color = '#16a34a';
+        }
+    });
+
+    // =============================================
+    // FORM SUBMIT - loading state
+    // =============================================
+    document.getElementById('complaintForm').addEventListener('submit', function () {
+        var btn = document.getElementById('submitBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}
